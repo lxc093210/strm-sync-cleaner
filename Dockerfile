@@ -6,4 +6,5 @@ COPY . /app
 
 RUN pip install --no-cache-dir watchdog
 
-CMD ["python", "/app/main.py"]
+CMD ["python", "-u", "/app/main.py"]
+
