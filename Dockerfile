@@ -4,7 +4,10 @@ WORKDIR /app
 
 COPY . /app
 
-RUN pip install --no-cache-dir watchdog
+# 安装 Flask，用于 Web UI
+RUN pip install --no-cache-dir flask
 
-CMD ["python", "-u", "/app/main.py"]
+# Web UI 默认端口
+EXPOSE 8000
 
+CMD ["python", "/app/main.py"]
