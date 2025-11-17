@@ -4,8 +4,9 @@ import time
 import shutil
 
 # ========== 配置 ==========
-SOURCE_DIR = "/vol3/1000/docker/AppData/strm"        # 导出未整理的 strm
-TARGET_DIR = "/vol3/1000/lxcemby/emby/video"         # 整理后的 strm
+SOURCE_DIR = "/raw"        # 导出未整理的 strm（容器内路径）
+TARGET_DIR = "/sorted"     # 整理后的 strm（容器内路径）
+
 
 EXT = ".strm"
 SCAN_INTERVAL = 5  # 秒
