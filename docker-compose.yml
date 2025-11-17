@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  strm-sync-cleaner:
+    container_name: strm-sync-cleaner
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+
+    volumes:
+      - /vol3/1000/docker/AppData/strm:/raw
+      - /vol3/1000/lxcemby/emby/video:/sorted
+
+    environment:
+      - TZ=Asia/Shanghai
