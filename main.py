@@ -1,6 +1,7 @@
 import os
 import hashlib
 import time
+from datetime import datetime
 
 # ========= 配置 =========
 # 未整理 STRM（导出目录）
@@ -9,7 +10,9 @@ SOURCE_DIR = "/raw"
 TARGET_DIR = "/sorted"
 
 EXT = ".strm"
-SCAN_INTERVAL = 5  # 秒
+
+# 默认 24 小时扫一次，如需调整，可通过环境变量 SCAN_INTERVAL 覆盖（单位：秒）
+SCAN_INTERVAL = int(os.getenv("SCAN_INTERVAL", "86400"))
 
 # 会一起清理的封面扩展名
 COVER_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -50,9 +53,7 @@ def try_remove_empty_dirs(root: str):
     """尝试删除空目录（自底向上）"""
     if not os.path.exists(root):
         return
-    # 自底向上遍历
     for base, dirs, files in os.walk(root, topdown=False):
-        # 目录里既没有子目录也没有文件 → 删
         if not dirs and not files:
             try:
                 os.rmdir(base)
@@ -64,12 +65,16 @@ def try_remove_empty_dirs(root: str):
 print("=== STRM Sync Cleaner Started (NO-WEB) ===")
 print(f"Source (未整理目录): {SOURCE_DIR}")
 print(f"Target (整理后目录): {TARGET_DIR}")
+print(f"Scan Interval: {SCAN_INTERVAL} 秒")
 print("==========================================")
 
 
 # ========= 主循环：根据哈希同步删除 =========
 while True:
     try:
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"\n[START] 本轮扫描开始于: {now}")
+
         source_index = build_index(SOURCE_DIR)
         target_index = build_index(TARGET_DIR)
 
@@ -120,10 +125,9 @@ while True:
         # 4. 尝试删除空目录
         try_remove_empty_dirs(TARGET_DIR)
 
-        print(f"[SLEEP] {SCAN_INTERVAL} 秒后再次扫描\n")
+        print(f"[SLEEP] 接下来休眠 {SCAN_INTERVAL} 秒（约 {SCAN_INTERVAL // 3600} 小时）\n")
 
     except Exception as e:
         print(f"[FATAL] 主循环异常: {e}")
 
     time.sleep(SCAN_INTERVAL)
-
