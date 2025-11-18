@@ -1,11 +1,18 @@
+version: "3.8"
+
 services:
   strm-sync-cleaner:
     build: .
     container_name: strm-sync-cleaner
+
+    environment:
+      - SCAN_INTERVAL=5   # 扫描间隔：86400 秒 = 24 小时
+
     volumes:
       # 导出未整理 STRM 的目录
       - /vol3/1000/docker/AppData/strm:/raw
+
       # Emby 整理后的目录
       - /vol3/1000/lxcemby/emby/video:/sorted
-    restart: unless-stopped
 
+    restart: unless-stopped
