@@ -10,12 +10,30 @@ SOURCE_DIR = "/raw"
 TARGET_DIR = "/sorted"
 
 EXT = ".strm"
-
-# 默认 24 小时扫一次，如需调整，可通过环境变量 SCAN_INTERVAL 覆盖（单位：秒）
+# 默认 24 小时扫一次，如需调整，可以通过环境变量 SCAN_INTERVAL 覆盖（单位：秒）
 SCAN_INTERVAL = int(os.getenv("SCAN_INTERVAL", "86400"))
 
 # 会一起清理的封面扩展名
 COVER_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
+
+# ★ 不允许删除的目标子目录（容器内部路径）
+#   对应宿主机：/vol3/1000/lxcemby/emby/video/115媒体库
+EXCLUDE_DIRS = {
+    os.path.normpath("/sorted/115媒体库"),
+}
+
+
+# ========= 工具函数 =========
+
+def is_excluded_path(path: str) -> bool:
+    """
+    判断某个路径是否在排除目录下
+    """
+    norm = os.path.normpath(path)
+    for ex in EXCLUDE_DIRS:
+        if norm == ex or norm.startswith(ex + os.sep):
+            return True
+    return False
 
 
 # ========= 读取 STRM 文件内容 hash，用于匹配 =========
@@ -37,10 +55,17 @@ def build_index(root: str) -> dict[str, list[str]]:
         return index
 
     for base, dirs, files in os.walk(root):
+        # ★ 如果当前目录在排除范围内，整棵子树都跳过
+        if is_excluded_path(base):
+            continue
+
         for name in files:
             if not name.lower().endswith(EXT):
                 continue
             full = os.path.join(base, name)
+            # 再保险一次（理论上不会进来）
+            if is_excluded_path(full):
+                continue
             h = strm_hash(full)
             if not h:
                 continue
@@ -50,10 +75,13 @@ def build_index(root: str) -> dict[str, list[str]]:
 
 
 def try_remove_empty_dirs(root: str):
-    """尝试删除空目录（自底向上）"""
+    """尝试删除空目录（自底向上），排除 EXCLUDE_DIRS"""
     if not os.path.exists(root):
         return
     for base, dirs, files in os.walk(root, topdown=False):
+        # 在排除目录下的不动
+        if is_excluded_path(base):
+            continue
         if not dirs and not files:
             try:
                 os.rmdir(base)
@@ -65,21 +93,19 @@ def try_remove_empty_dirs(root: str):
 print("=== STRM Sync Cleaner Started (NO-WEB) ===")
 print(f"Source (未整理目录): {SOURCE_DIR}")
 print(f"Target (整理后目录): {TARGET_DIR}")
-print(f"Scan Interval: {SCAN_INTERVAL} 秒")
+print(f"Exclude(不清理目录): {', '.join(EXCLUDE_DIRS)}")
 print("==========================================")
 
 
 # ========= 主循环：根据哈希同步删除 =========
 while True:
     try:
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(f"\n[START] 本轮扫描开始于: {now}")
-
         source_index = build_index(SOURCE_DIR)
         target_index = build_index(TARGET_DIR)
 
         print(
-            f"[INFO] 本轮扫描：源目录 {len(source_index)} 条哈希，"
+            f"[{datetime.now().isoformat()}] 本轮扫描："
+            f"源目录 {len(source_index)} 条哈希，"
             f"目标目录 {len(target_index)} 条哈希"
         )
 
@@ -89,6 +115,10 @@ while True:
                 continue
 
             for strm_path in target_paths:
+                # ★ 安全保护：如果这个 .strm 本身在排除目录里，直接跳过
+                if is_excluded_path(strm_path):
+                    continue
+
                 base_dir = os.path.dirname(strm_path)
 
                 # 1. 删除目标目录中的 .strm
@@ -102,30 +132,32 @@ while True:
                 # 2. 删除同名 .nfo
                 base_no_ext, _ = os.path.splitext(strm_path)
                 nfo_path = base_no_ext + ".nfo"
-                if os.path.exists(nfo_path):
+                if os.path.exists(nfo_path) and not is_excluded_path(nfo_path):
                     try:
                         os.remove(nfo_path)
                         print(f"[DEL] NFO : {nfo_path}")
                     except Exception as e:
                         print(f"[ERR] 删除 NFO 失败: {nfo_path} -> {e}")
 
-                # 3. 删除同目录下封面图（backdrop.jpg / poster.png 等）
-                if os.path.isdir(base_dir):
+                # 3. 删除同目录下封面图
+                if os.path.isdir(base_dir) and not is_excluded_path(base_dir):
                     for name in os.listdir(base_dir):
                         lower = name.lower()
                         _, ext = os.path.splitext(lower)
                         if ext in COVER_EXTS:
                             cover_full = os.path.join(base_dir, name)
+                            if is_excluded_path(cover_full):
+                                continue
                             try:
                                 os.remove(cover_full)
                                 print(f"[DEL] COVER: {cover_full}")
                             except Exception as e:
                                 print(f"[ERR] 删除图片失败: {cover_full} -> {e}")
 
-        # 4. 尝试删除空目录
+        # 4. 尝试删除空目录（不动 115媒体库）
         try_remove_empty_dirs(TARGET_DIR)
 
-        print(f"[SLEEP] 接下来休眠 {SCAN_INTERVAL} 秒（约 {SCAN_INTERVAL // 3600} 小时）\n")
+        print(f"[SLEEP] {SCAN_INTERVAL} 秒后再次扫描\n")
 
     except Exception as e:
         print(f"[FATAL] 主循环异常: {e}")
