@@ -1,18 +1,14 @@
-version: "3.8"
-
 services:
   strm-sync-cleaner:
     build: .
     container_name: strm-sync-cleaner
-
     environment:
-      - SCAN_INTERVAL=86400   # 扫描间隔：86400 秒 = 24 小时
-
+      - SOURCE_DIRS=/raw/shuhua:/raw/tongxue
+      - TARGET_DIR=/sorted
+      - SCAN_INTERVAL=86400
+      - DRY_RUN=1   # 先演练一轮，确认没问题再改成 0
     volumes:
-      # 导出未整理 STRM 的目录
-      - /vol1/1000/happyemby/date/alist/同学数据:/raw
-
-      # Emby 整理后的目录
+      - /vol1/1000/happyemby/date/alist/书画影音:/raw/shuhua:ro
+      - /vol1/1000/happyemby/date/alist/同学数据:/raw/tongxue:ro
       - /vol1/1000/happyemby/date/alist已整理/alist:/sorted
-
     restart: unless-stopped
