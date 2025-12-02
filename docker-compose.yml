@@ -6,7 +6,7 @@ services:
       - SOURCE_DIRS=/raw/shuhua:/raw/tongxue
       - TARGET_DIR=/sorted
       - SCAN_INTERVAL=86400
-      - DRY_RUN=1   # 先演练一轮，确认没问题再改成 0
+      - DRY_RUN=0   # 先演练一轮，确认没问题再改成 0
     volumes:
       - /vol1/1000/happyemby/date/alist/书画影音:/raw/shuhua:ro
       - /vol1/1000/happyemby/date/alist/同学数据:/raw/tongxue:ro
