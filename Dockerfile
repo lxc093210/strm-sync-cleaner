@@ -2,7 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY . /app
+# 时区（可选）
+ENV TZ=Asia/Shanghai
 
-CMD ["python", "-u", "/app/main.py"]
+# 复制你的 main.py
+COPY main.py /app/main.py
+
+# 运行主脚本
+CMD ["python", "-u", "main.py"]
 
