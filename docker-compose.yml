@@ -10,9 +10,9 @@ services:
 
     volumes:
       # 导出未整理 STRM 的目录
-      - /vol3/1000/docker/AppData/strm:/raw
+      - /vol1/1000/happyemby/date/alist/同学数据:/raw
 
       # Emby 整理后的目录
-      - /vol3/1000/lxcemby/emby/video:/sorted
+      - /vol1/1000/happyemby/date/alist已整理/alist:/sorted
 
     restart: unless-stopped
